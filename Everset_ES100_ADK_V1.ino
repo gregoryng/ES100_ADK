@@ -40,8 +40,8 @@ POSSIBILITY OF SUCH DAMAGE.
 
 // include the library code:
 #include <LiquidCrystal.h>
-#include <DS3231.h>
-#include <ES100.h>
+#include "DS3231.h"
+#include "ES100.h"
 #include <Wire.h>
 
 

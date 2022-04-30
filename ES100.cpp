@@ -35,7 +35,7 @@ POSSIBILITY OF SUCH DAMAGE.
  ******************************************************************************/
 #include <Arduino.h>
 #include <Wire.h>
-#include <ES100.h>
+#include "ES100.h"
 
 #define DEBUG
 //#define DEBUG_I2C
