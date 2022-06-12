@@ -43,7 +43,9 @@ POSSIBILITY OF SUCH DAMAGE.
 
 // include the library code:
 #include <LiquidCrystal.h>
-#include "DS3231.h"
+//#include "DS3231.h"
+// https://github.com/Zanduino/DS3231M
+#include <DS3231M.h>
 #include "ES100.h"
 #include <Wire.h>
 
@@ -78,13 +80,13 @@ boolean continous = false;        // variable to tell the system to continously 
 boolean validdecode = false;      // variable to rapidly know if the system had a valid decode done lately
 
 
-Time t;
+//Time t;
+DateTime t;
 ES100DateTime d;
 ES100Status0  status0;
 ES100NextDst  nextDst;
 
-DS3231 rtc(SDA, SCL);
-
+DS3231M_Class rtc;
 
 void atomic() {
   // Called procedure when we receive an interrupt from the ES100
@@ -96,44 +98,44 @@ void atomic() {
 char * getISODateStr() {
   static char result[19];
 
-  t=rtc.getTime();
+  t = rtc.now();
 
-  result[0]=char((t.year / 1000)+48);
-  result[1]=char(((t.year % 1000) / 100)+48);
-  result[2]=char(((t.year % 100) / 10)+48);
-  result[3]=char((t.year % 10)+48);
+  result[0]=char((t.year() / 1000)+48);
+  result[1]=char(((t.year() % 1000) / 100)+48);
+  result[2]=char(((t.year() % 100) / 10)+48);
+  result[3]=char((t.year() % 10)+48);
   result[4]=45;
-  if (t.mon<10)
+  if (t.month()<10)
     result[5]=48;
   else
-    result[5]=char((t.mon / 10)+48);
-  result[6]=char((t.mon % 10)+48);
+    result[5]=char((t.month() / 10)+48);
+  result[6]=char((t.month() % 10)+48);
   result[7]=45;
-  if (t.date<10)
+  if (t.day()<10)
     result[8]=48;
   else
-    result[8]=char((t.date / 10)+48);
-  result[9]=char((t.date % 10)+48);
+    result[8]=char((t.day() / 10)+48);
+  result[9]=char((t.day() % 10)+48);
   
   result[10]=84;
 
-  if (t.hour<10)
+  if (t.hour()<10)
     result[11]=48;
   else
-    result[11]=char((t.hour / 10)+48);
-  result[12]=char((t.hour % 10)+48);
+    result[11]=char((t.hour() / 10)+48);
+  result[12]=char((t.hour() % 10)+48);
   result[13]=58;
-  if (t.min<10)
+  if (t.minute()<10)
     result[14]=48;
   else
-    result[14]=char((t.min / 10)+48);
-  result[15]=char((t.min % 10)+48);
+    result[14]=char((t.minute() / 10)+48);
+  result[15]=char((t.minute() % 10)+48);
   result[16]=58;
-  if (t.sec<10)
+  if (t.second()<10)
     result[17]=48;
   else
-    result[17]=char((t.sec / 10)+48);
-  result[18]=char((t.sec % 10)+48);
+    result[17]=char((t.second() / 10)+48);
+  result[18]=char((t.second() % 10)+48);
   result[19]=90;
   result[20]=0;
 
@@ -371,7 +373,11 @@ void setup() {
   lcd.begin(20, 4);
   lcd.clear();
   rtc.begin();
-  
+  while (!rtc.begin())  // Initialize RTC communications
+  {
+    Serial.println(F("Unable to find DS3231M. Checking again in 3s."));
+    delay(3000);
+  }  
   /*  Time zone and DST setting:
    *  The value for es100.timezone can be positive or negative
    *  For example: es100.timezone = -5
@@ -420,8 +426,10 @@ void loop() {
       // We received a valid decode
       d = es100.getDateTime();
       // Updating the RTC
-      rtc.setDate(d.day, d.month, 2000+d.year);
-      rtc.setTime(d.hour, d.minute, d.second + ((millis() - atomicMillis)/1000));
+      //rtc.setDate(d.day, d.month, 2000+d.year);
+      //rtc.setTime(d.hour, d.minute, d.second + ((millis() - atomicMillis)/1000));
+      t = DateTime(2000+d.year, d.month, d.day, d.hour, d.minute, d.second);
+      rtc.adjust(t);
 
       // Get everything before disabling the chip.
       status0 = es100.getStatus0();
@@ -438,7 +446,7 @@ void loop() {
       Serial.println(status0.dstState, BIN);
       Serial.print("status0.tracking = B");
       Serial.println(status0.tracking, BIN);
-/* END DENUG */
+/* END DEBUG */
   
       if (!continous) {
         es100.stopRx();
@@ -457,7 +465,7 @@ void loop() {
 
     // set the trigger to start reception at midnight (UTC-4) if we are not in continous mode.
     // 4am UTC is midnight for me, adjust to your need
-    trigger = (!continous && !receiving && t.hour == 4 && t.min == 0); 
+    trigger = (!continous && !receiving && t.hour() == 4 && t.minute() == 0); 
     
     lastMillis = millis();
   }
