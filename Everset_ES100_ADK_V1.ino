@@ -1,3 +1,4 @@
+
 /*
 This is the demonstration code for the UNIVERSAL-SOLDER / Everset ES100 
 Application Development Kit. It reads the decoded time stamp from 
@@ -5,7 +6,9 @@ the ES100MOD receiver module and shows several information on a 4x20
 character display. There are no function assignments for unused GPIO,
 analog inputs and the 3 push buttons included in this sketch.
 
-Version: 1 (10/04/2020)
+Version: 1.1 (11/08/2021)
+
+NEW in 1.1: timezone and DST setting added; requires library V 1.1
 
 PLEASE FEEL FREE TO CONTRIBUTE TO THE DEVELOPMENT. CORRECTIONS AND
 ADDITIONS ARE HIGHLY APPRECIATED. SEND YOUR COMMENTS OR CODE TO:
@@ -53,11 +56,12 @@ POSSIBILITY OF SUCH DAMAGE.
 #define lcdD7 11
 LiquidCrystal lcd(lcdRS, lcdEN, lcdD4, lcdD5, lcdD6, lcdD7);
 
-DS3231 rtc(SDA, SCL);
 
 #define es100Int 2
 #define es100En 13
+
 ES100 es100;
+
 uint8_t     lp = 0;
 
 unsigned long lastMillis = 0;
@@ -78,6 +82,9 @@ Time t;
 ES100DateTime d;
 ES100Status0  status0;
 ES100NextDst  nextDst;
+
+DS3231 rtc(SDA, SCL);
+
 
 void atomic() {
   // Called procedure when we receive an interrupt from the ES100
@@ -262,8 +269,8 @@ void showlcd() {
   lcd.print(getISODateStr());
 
   if (validdecode) {
-    // Scroll lines every 5 seconds.
-    int lcdLine = (millis() / 5000 % 6) + 1;
+    // Scroll lines every 2 seconds.
+    int lcdLine = (millis() / 2000 % 6) + 1;
 
     lcd.setCursor(0,1);
     clearLine(20);
@@ -365,6 +372,19 @@ void setup() {
   lcd.clear();
   rtc.begin();
   
+  /*  Time zone and DST setting:
+   *  The value for es100.timezone can be positive or negative
+   *  For example: es100.timezone = -5
+   *  The value for es100.DSTenable can be true or false
+   *  For example: es100.DSTenabled = true
+   *  If es100.DSTenabled is false, then no DST correction is performed
+   *  even if DST is in effect.
+   */
+  
+  es100.timezone = 0;
+  es100.DSTenabled = false;
+
+  
   attachInterrupt(digitalPinToInterrupt(es100Int), atomic, FALLING);
 }
 
@@ -387,6 +407,7 @@ void loop() {
     lastinterruptCnt = 0;
     interruptCnt = 0;
   }
+
 
   if (lastinterruptCnt < interruptCnt) {
     Serial.print("ES100 Interrupt received... ");

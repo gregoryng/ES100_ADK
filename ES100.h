@@ -1,6 +1,5 @@
 /*
-
-
+Everset ES100 Library V1.1 
 */
 
 #ifndef ES100_h
@@ -89,6 +88,8 @@ class ES100
 		uint8_t 		getDstState();
 		uint8_t 		getTracking();
 		
+		int timezone   = 0;			    // time shift with a specific timezone. Can be placed any time that int can handle
+		int DSTenabled = false;			// time shift depending on the DST
 
 	private:
 		uint8_t			_int_pin;
@@ -99,5 +100,6 @@ class ES100
 		uint8_t		_readRegister(uint8_t addr);
 		void		_I2Cwrite(uint8_t addr, uint8_t numBytes, uint8_t *ptr);
 		void		_I2Cread(uint8_t addr, uint8_t numBytes, uint8_t *ptr);
+		void 		shiftTime(int *year, int *month, int *day, int *hours, int *minutes, int *seconds);
 };
 #endif

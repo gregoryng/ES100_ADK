@@ -1,6 +1,7 @@
 /*
-This is the library for Everset ES100 WWVB (BPSK) receiver chip, written by
-UNIVERSAL-SOLDER's great supporter François Allard.
+Everset ES100 WWVB (BPSK) receiver Library V1.1
+Written by François Allard
+Modified by matszwe02
 
 UNIVERSAL-SOLDER invests time and resources in order to be able to provide
 this open source code; please support UNIVERSAL-SOLDER by purchasing products
@@ -174,19 +175,30 @@ uint8_t ES100::getDeviceID()
 
 ES100DateTime ES100::getDateTime()
 {
+	int shiftBy = timezone + DSTenabled * (getDstState() > 1);
 	#ifdef DEBUG
 		Serial.println(F("ES100::getDateTime"));
+		Serial.println("Shifting by " + String(shiftBy));
 	#endif
 
 	ES100DateTime data;
+	
+	int year    = (int)bcdToDec(_readRegister(ES100_YEAR_REG));
+	int month   = (int)bcdToDec(_readRegister(ES100_MONTH_REG));
+	int day     = (int)bcdToDec(_readRegister(ES100_DAY_REG));
+	int hours   = (int)bcdToDec(_readRegister(ES100_HOUR_REG)) + shiftBy;
+	int minutes = (int)bcdToDec(_readRegister(ES100_MINUTE_REG));
+	int seconds = (int)bcdToDec(_readRegister(ES100_SECOND_REG));
+	
+	shiftTime(&year, &month, &day, &hours, &minutes, &seconds);
 
-	data.year 	= bcdToDec(_readRegister(ES100_YEAR_REG));
-	data.month 	= bcdToDec(_readRegister(ES100_MONTH_REG));
-	data.day 	= bcdToDec(_readRegister(ES100_DAY_REG));
-	data.hour 	= bcdToDec(_readRegister(ES100_HOUR_REG));
-	data.minute = bcdToDec(_readRegister(ES100_MINUTE_REG));
-	data.second	= bcdToDec(_readRegister(ES100_SECOND_REG));
-
+	data.year 	= (uint8_t)year;
+	data.month 	= (uint8_t)month;
+	data.day 	= (uint8_t)day;
+	data.hour 	= (uint8_t)hours;
+	data.minute = (uint8_t)minutes;
+	data.second	= (uint8_t)seconds;
+	
 	return data;
 }
 
@@ -351,4 +363,66 @@ void ES100::stopRx()
 		Serial.println("ES100::stopRx");
 	#endif
 	_writeRegister(ES100_CONTROL0_REG, 0x00);
+}
+
+
+void ES100::shiftTime(int *year, int *month, int *day, int *hours, int *minutes, int *seconds)
+{
+  
+		int monthDim[] = { 31,28,31,30,31,30,31,31,30,31,30,31 };
+      
+      while(*seconds < 0)
+      {
+        *seconds += 60;
+        *minutes -= 1;
+      }
+      while(*seconds >= 60)
+      {
+        *seconds -= 60;
+        *minutes += 1;
+      }
+      
+      while(*minutes < 0)
+      {
+        *minutes += 60;
+        *hours -= 1;
+      }
+      while(*minutes >= 60)
+      {
+        *minutes -= 60;
+        *hours += 1;
+      }
+      
+      while(*hours < 0)
+      {
+        *hours += 24;
+        *day -= 1;
+      }
+      while(*hours >= 24)
+      {
+        *hours -= 24;
+        *day += 1;
+      }
+      
+      while(*day < 0)
+      {
+        *month -= 1;
+        *day += monthDim[*month];
+      }
+      while(*day > monthDim[*month])
+      {
+        *day -= monthDim[*month];
+        *month += 1;
+      }
+      
+      while(*month > 12)
+      {
+        *month -= 12;
+        *year += 1;
+      }
+      while(*month < 1)
+      {
+        *month += 12;
+        *year -= 1;
+      }
 }
