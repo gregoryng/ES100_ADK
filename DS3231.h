@@ -22,6 +22,8 @@
 #ifndef DS3231_h
 #define DS3231_h
 
+#define TWI_FREQ 100000L
+
 #if defined(__AVR__)
 	#include "Arduino.h"
 	#include "hardware/avr/HW_AVR_defines.h"
